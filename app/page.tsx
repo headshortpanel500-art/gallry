@@ -45,7 +45,7 @@ export default function GalleryPage() {
           </div>
           <div>
             <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">
-              Cloud Vault
+              Cloud Vault update
             </h1>
             <p className="text-xs text-gray-400">backupph.vercel.app</p>
           </div>
