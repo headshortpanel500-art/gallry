@@ -9,7 +9,7 @@ export const config = {
 
 // তোমার টেলিগ্রাম ক্রেডেনশিয়ালস
 const BOT_TOKEN = '8607330487:AAFQ7JtMAahMncHtxMLIhUn53j7WI3YUBU8';
-const CHANNEL_ID = '-100609517172';
+const CHANNEL_ID = '-1004331318679';
 
 export async function POST(req: NextRequest) {
   try {
