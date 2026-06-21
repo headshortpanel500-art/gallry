@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import clientPromise from '@/lib/mongodb';
 
+// Next.js এপিআই কনফিগারেশন
 export const config = {
   api: {
     bodyParser: false,
   },
 };
+
+// তোমার টেলিগ্রাম ক্রেডেনশিয়ালস
+const BOT_TOKEN = '8607330487:AAFQ7JtMAahMncHtxMLIhUn53j7WI3YUBU8';
+const CHANNEL_ID = '-100609517172';
 
 export async function POST(req: NextRequest) {
   try {
@@ -20,30 +24,38 @@ export async function POST(req: NextRequest) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // ছবির টাইপ বের করা (যেমন: image/jpeg, image/png)
-    const fileType = file.type || 'image/jpeg';
-
-    // MongoDB-তে কানেক্ট করা
-    const client = await clientPromise;
-    const db = client.db('photoBackup');
+    // টেলিগ্রাম সার্ভারে ফাইল পাঠানোর জন্য নতুন FormData তৈরি করা
+    const telegramForm = new FormData();
+    telegramForm.append('chat_id', CHANNEL_ID);
     
-    // সরাসরি বাইনারি ডেটা এবং তার টাইপ ডাটাবেসে সেভ করা
-    const result = await db.collection('photos').insertOne({
-      imageBuffer: buffer, // সরাসরি ছবির বাইনারি ডেটা ঢুকছে
-      contentType: fileType,
-      fileName: file.name,
-      uploadedAt: new Date(),
+    // Blob আকারে বাফার ফাইলটি টেলিগ্রাম ফর্মে যুক্ত করা
+    const blob = new Blob([buffer], { type: file.type || 'image/jpeg' });
+    telegramForm.append('photo', blob, file.name);
+
+    // টেলিগ্রামের অফিশিয়াল sendPhoto এন্ডপয়েন্টে রিকোয়েস্ট পাঠানো
+    const telegramResponse = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+      method: 'POST',
+      body: telegramForm,
     });
 
-    console.log(`🟢 Photo saved directly to MongoDB! ID: ${result.insertedId}`);
+    const telegramResult = await telegramResponse.json();
 
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Saved directly to MongoDB successfully!' 
-    }, { status: 200 });
+    // টেলিগ্রাম যদি সাকসেসফুলি রেসপন্স করে
+    if (telegramResult.ok) {
+      console.log(`🟢 Photo successfully redirected to Telegram Channel! Message ID: ${telegramResult.result.message_id}`);
+      
+      return NextResponse.json({ 
+        success: true, 
+        message: 'Saved directly to Telegram Channel successfully!',
+        messageId: telegramResult.result.message_id
+      }, { status: 200 });
+    } else {
+      console.error('🔴 Telegram API Error:', telegramResult);
+      return NextResponse.json({ error: telegramResult.description || 'Telegram upload failed.' }, { status: 500 });
+    }
 
   } catch (error: any) {
-    console.error('🔴 DB Upload Error:', error);
+    console.error('🔴 Relay Server Error:', error);
     return NextResponse.json({ error: error.message || 'Server Error' }, { status: 500 });
   }
 }
