@@ -96,7 +96,7 @@ export default function GalleryPage() {
         
         <div className="mb-12 border-l-4 border-blue-500 pl-6 py-2 bg-gradient-to-r from-blue-500/5 to-transparent rounded-r-xl">
           <h2 className="text-3xl md:text-4xl font-black tracking-tight text-white">
-            Secure Database <span className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">Dashboard</span>
+            Secure Database update <span className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">Dashboard</span>
           </h2>
           <p className="text-gray-400 mt-2 text-sm max-w-2xl">
             Manage your assets securely. Delete any content directly from your remote MongoDB collection below.
