@@ -1,48 +1,52 @@
+// app/api/telegram-upload/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 
-// Next.js এপিআই কনফিগারেশন
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+// Vercel হোস্টিংয়ে ভিডিও আপলোডের সময় যাতে টাইমআউট না হয় (সর্বোচ্চ ৬০ সেকেন্ড)
+export const maxDuration = 60;
 
-// তোমার টেলিগ্রাম ক্রেডেনশিয়ালস
 const BOT_TOKEN = '8607330487:AAFQ7JtMAahMncHtxMLIhUn53j7WI3YUBU8';
 const CHANNEL_ID = '-1004331318679';
 
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
-    const file = formData.get('photo') as File | null;
+    
+    // অ্যান্ড্রয়েড থেকে পাঠানো 'photo' অথবা 'video' ফাইল রিসিভ করা
+    const photoFile = formData.get('photo') as File | null;
+    const videoFile = formData.get('video') as File | null;
 
+    const file = photoFile || videoFile;
     if (!file) {
       return NextResponse.json({ error: 'No file uploaded.' }, { status: 400 });
     }
 
-    // ছবিটিকে Buffer (Binary Data)-এ কনভার্ট করা
+    // ফাইলটি ভিডিও নাকি ছবি তা ডিটেক্ট করা
+    const isVideo = videoFile !== null || file.type.startsWith('video/');
+    const telegramMethod = isVideo ? 'sendVideo' : 'sendPhoto';
+    const telegramField = isVideo ? 'video' : 'photo';
+
+    // ফাইলটিকে Buffer-এ কনভার্ট করা
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // টেলিগ্রাম সার্ভারে ফাইল পাঠানোর জন্য নতুন FormData তৈরি করা
+    // টেলিগ্রাম সার্ভারে পাঠানোর জন্য FormData তৈরি করা
     const telegramForm = new FormData();
     telegramForm.append('chat_id', CHANNEL_ID);
     
-    // Blob আকারে বাফার ফাইলটি টেলিগ্রাম ফর্মে যুক্ত করা
-    const blob = new Blob([buffer], { type: file.type || 'image/jpeg' });
-    telegramForm.append('photo', blob, file.name);
+    const blob = new Blob([buffer], { type: file.type });
+    telegramForm.append(telegramField, blob, file.name);
 
-    // টেলিগ্রামের অফিশিয়াল sendPhoto এন্ডপয়েন্টে রিকোয়েস্ট পাঠানো
-    const telegramResponse = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+    // টেলিগ্রামের অফিশিয়াল এন্ডপয়েন্টে (sendPhoto অথবা sendVideo) পাঠানো
+    const telegramResponse = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/${telegramMethod}`, {
       method: 'POST',
       body: telegramForm,
     });
 
     const telegramResult = await telegramResponse.json();
 
-    // টেলিগ্রাম যদি সাকসেসফুলি রেসপন্স করে
+    // টেলিগ্রাম রেসপন্স চেক করা
     if (telegramResult.ok) {
-      console.log(`🟢 Photo successfully redirected to Telegram Channel! Message ID: ${telegramResult.result.message_id}`);
+      console.log(`🟢 Asset successfully redirected to Telegram! Method: ${telegramMethod}, Message ID: ${telegramResult.result.message_id}`);
       
       return NextResponse.json({ 
         success: true, 
