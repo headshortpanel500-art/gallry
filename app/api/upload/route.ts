@@ -1,7 +1,7 @@
 // app/api/telegram-upload/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 
-// Vercel হোস্টিংয়ে ভিডিও আপলোডের সময় যাতে টাইমআউট না হয় (সর্বোচ্চ ৬০ সেকেন্ড)
+// Vercel হোস্টিংয়ে ভিডিও আপলোডের সময় যাতে টাইমআউট না হয় (সর্বোচ্চ ৬০ সেকেন্ড)
 export const maxDuration = 60;
 
 const BOT_TOKEN = '8607330487:AAFQ7JtMAahMncHtxMLIhUn53j7WI3YUBU8';
@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
     
-    // অ্যান্ড্রয়েড থেকে পাঠানো 'photo' অথবা 'video' ফাইল রিসিভ করা
+    // অ্যান্ড্রয়েড থেকে পাঠানো 'photo' অথবা 'video' ফাইল রিসিভ করা
     const photoFile = formData.get('photo') as File | null;
     const videoFile = formData.get('video') as File | null;
 
@@ -20,8 +20,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No file uploaded.' }, { status: 400 });
     }
 
-    // ফাইলটি ভিডিও নাকি ছবি তা ডিটেক্ট করা
-    const isVideo = videoFile !== null || file.type.startsWith('video/');
+    // 💡 সেফটি চেক: ফাইল টাইপ ব্যাকআপ হিসেবে ডিফাইন করা যাতে এরর না আসে
+    const mimeType = file.type || '';
+    const isVideo = videoFile !== null || mimeType.startsWith('video/') || file.name.endsWith('.mp4');
+    
     const telegramMethod = isVideo ? 'sendVideo' : 'sendPhoto';
     const telegramField = isVideo ? 'video' : 'photo';
 
@@ -33,10 +35,12 @@ export async function POST(req: NextRequest) {
     const telegramForm = new FormData();
     telegramForm.append('chat_id', CHANNEL_ID);
     
-    const blob = new Blob([buffer], { type: file.type });
+    // মিম টাইপ না থাকলে ডিফল্ট টাইপ সেট করা
+    const defaultMime = isVideo ? 'video/mp4' : 'image/jpeg';
+    const blob = new Blob([buffer], { type: mimeType || defaultMime });
     telegramForm.append(telegramField, blob, file.name);
 
-    // টেলিগ্রামের অফিশিয়াল এন্ডপয়েন্টে (sendPhoto অথবা sendVideo) পাঠানো
+    // টেলিগ্রামের অফিশিয়াল এন্ডপয়েন্টে পাঠানো
     const telegramResponse = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/${telegramMethod}`, {
       method: 'POST',
       body: telegramForm,
